@@ -182,6 +182,17 @@ contract SimpleAccountWithMultiSig is BaseAccount, TokenCallbackHandler, UUPSUpg
         }
     }
 
+    function setOwner(address _owner, bool isAdd, bytes calldata signatures) external {
+        _onlyMultiSig(signatures);
+        isOwner[_owner] = isAdd;
+    }
+
+    function setThreshold(uint256 _threshold, bytes calldata signatures) external {
+        _onlyMultiSig(signatures);
+        require(_threshold > 0, "threshold must over 0");
+        threshold = _threshold;
+    }
+
     /**
      * check current account deposit in the entryPoint
      */

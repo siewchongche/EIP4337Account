@@ -200,6 +200,7 @@ describe("Account Abstraction", function () {
     const account = await ethers.getContractAt("SimpleAccountWithMultiSig", accountAddr)
     await owner.sendTransaction({ to: accountAddr, value: parseEther("1")})
 
+    // execute wallet transaction through userOp
     const userOp = await createEmptyUserOp(accountAddr, "SimpleAccountWithMultiSig")
     userOp.callData = account.interface.encodeFunctionData("execute", [randomWallet.address, parseEther("0.1"), "0x"])
     // userOp.signature = "0x"
@@ -216,6 +217,13 @@ describe("Account Abstraction", function () {
 
     await entryPoint.connect(bundler).handleOps([userOp], bundler.address)
     expect(await randomWallet.getBalance()).to.eq(parseEther("0.1"))
+
+    // execute wallet transaction through wallet itself
+    const keccakNonce = keccak256(defaultAbiCoder.encode(["uint256"], [await account.getNonce()]))
+    const sigListForDirectCall = [await owner.signMessage(arrayify(keccakNonce)), await owner3.signMessage(arrayify(keccakNonce))]
+    if (ethers.BigNumber.from(owner.address).gt(ethers.BigNumber.from(owner3.address))) sigListForDirectCall.reverse()
+    await account.executeWithMultiSig(randomWallet.address, parseEther("0.1"), "0x", hexConcat(sigListForDirectCall))
+    expect(await randomWallet.getBalance()).to.eq(parseEther("0.2"))
   }
 
 
